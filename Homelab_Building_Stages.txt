@@ -1,0 +1,124 @@
+﻿HOMELAB END-TO-END BUILD GUIDE
+Designed & implemented by Brandan Williams, M.S. Information Technology Security
+
+🧾 Executive Summary
+This document outlines the design and deployment of a homelab built to replicate enterprise IT and security operations. It provides a phased roadmap for implementing segmented networking, virtualization, resilient storage, and SOC capabilities in a controlled environment. The guide demonstrates how these components integrate to strengthen reliability, security, and observability while enabling safe experimentation. Readers can use this framework as a reference for building, securing, and managing complex IT infrastructures.
+
+The environment was engineered to support:
+
+• Proxmox virtualization (3-node cluster)
+• TrueNAS storage (45Drives HL15)
+• UniFi Enterprise networking with VLAN segmentation
+• Foundational services (DNS, NTP, Backups)
+• Mini SOC with SIEM, IDS/IPS, Honeypots, and SOAR automation
+
+✅ Key Objectives:
+
+• Reliability: UPS-backed, snapshot-friendly, immutable backups
+• Security: Strict VLAN isolation, least privilege firewalling
+• Observability: Centralized logging and SIEM integration
+• Repeatability: Documented and labeled infrastructure, IaC-ready
+• Safety: Offensive testing restricted to isolated lab VLANs
+______________________________________________________________________________________________
+
+🏗️ Phased Implementation
+
+🧰 Phase 0 — Plan & Design
+
+• Designed VLAN layout for management, cluster, storage, IoT, guest, and security services (10, 20, 30, 40, 53, 54, 60, 70, 80, 90, 100, 201, 999).
+• Created IPAM (IP Address Management) with naming conventions (e.g., lab-prox1, lab-truenas, lab-siem).
+• Developed rack and cable plan: color-coded patch cords per VLAN, labeled both ends, brush panels for cable management.
+• Sized dual-UPS power design for networking and compute/storage with graceful shutdown integration.
+______________________________________________________________________________________________
+
+💻 Phase 1 — Admin Endpoints
+
+• Desktop Admin PC: 8–12 core CPU, 32–64 GB RAM, dual NVMe, discrete GPU for multi-monitor dashboards, secured with BitLocker/LUKS and hardening (disable local admin, secure boot, WDAC/AppArmor).
+• Field Admin Laptop: 32–64 GB RAM, dual NVMe, Wi-Fi 6E, full-disk encryption, Tailscale, YubiKey integration for MFA.
+______________________________________________________________________________________________
+
+🧱 Phase 2 — Network Core & Wi-Fi (UniFi)
+
+• Deployed UniFi Fortress Gateway and aggregation switches on UPS-A.
+• Implemented VLANs with trunk uplinks and role-based port assignments.
+• Configured Wi-Fi SSIDs: Trusted (VLAN 60), IoT (VLAN 70), Guest (VLAN 80) with client isolation and firewall enforcement.
+Established baseline firewall rules:
+
+o Block inter-VLAN traffic by default
+o Allow only explicit flows (e.g., Mgmt → Admin, Storage access for trusted VLANs)
+o IDS/IPS enabled at WAN and LAN with Suricata
+______________________________________________________________________________________________
+
+🗄️ Phase 3 — Storage (TrueNAS)
+
+• Designed ZFS pools with RAIDZ2 + hot spare.
+• Created datasets for applications, backups, media, ISOs, and VM storage.
+• Enabled scheduled snapshots and cold storage replication (VLAN 30 → VLAN 40).
+• Integrated UPS signaling and alerting via Network UPS Tools (NUT).
+______________________________________________________________________________________________
+
+🔧 Phase 4 — Virtualization (Proxmox Cluster)
+
+• Built a 3-node Proxmox VE cluster with hardware-assisted virtualization (VT-d/IOMMU).
+• Configured VLAN-aware bridges for management, storage, and VM networks.
+• Integrated TrueNAS NFS storage for VM disks and ISO libraries.
+• Enabled high availability (HA) and tested live migration.
+______________________________________________________________________________________________
+
+🛠️ Phase 5 — Foundational Services
+
+• DNS Filtering: Dual Pi-hole instances on VLAN 53 & VLAN 54 with threat-intel blocklists.
+• NTP: Centralized Chrony server on VLAN 10.
+• Logging: Forwarded Proxmox, TrueNAS, and UniFi syslogs to a Graylog/Wazuh VM.
+• Backups: Nightly Proxmox backups to TrueNAS; ZFS snapshots replicated to cold storage.
+______________________________________________________________________________________________
+
+🔥 Phase 6 — Secure Remote Access (Tailscale)
+
+• Installed Tailscale across endpoints, hypervisors, and storage nodes.
+• Enforced ACLs restricting mgmt access to authorized admin devices.
+• Enabled device-based MFA and optional HTTPS certs for select services.
+______________________________________________________________________________________________
+
+📂 Phase 7 — Media & Applications
+
+• Deployed Plex with GPU passthrough (NVIDIA RTX A2000).
+• Configured PCI passthrough (VFIO) for hardware transcoding.
+• Applied network restrictions for outbound traffic control.
+______________________________________________________________________________________________
+
+🛡️ Phase 8 — Mini SOC (Blue/Red Lab)
+
+• SIEM (Wazuh/Graylog): Centralized log ingestion from UniFi, Proxmox, TrueNAS, Pi-hole.
+• IDS (Suricata/Zeek): Monitored via UniFi SPAN feeds.
+• Honeypots (Cowrie/Dionaea): Deployed in IoT and Guest VLANs.
+• SOAR (Automation): Automated blocking of malicious IPs in UniFi, triggered snapshots of suspicious VMs.
+• Forensics VM: Used for IR drills, memory/disk forensics, and malware detonation.
+• Conducted security playbook exercises: DNS anomaly response, port scan blocking, SSH brute-force mitigation.
+______________________________________________________________________________________________
+
+🛠️ Phase 9 — Operations
+
+• Patching: Monthly network/VMs, quarterly hypervisors.
+• Backup Verification: Random VM restores monthly, ZFS rollback drills quarterly. Security Drills: SOC playbook rehearsals monthly, key rotation quarterly.
+• Monitoring: Grafana dashboards for infrastructure metrics; SIEM dashboards for security insights.
+• Documentation: All configs, firewall rules, and runbooks version-controlled in Git.
+______________________________________________________________________________________________
+
+🧭 Appendices
+
+• Firewall Templates: Inter-VLAN blocklists, admin-only flows, guest isolation rules.
+• Port Profiles: VLAN mappings for Proxmox, TrueNAS, SOC services.
+• Backup Strategy: Hourly, daily, weekly ZFS snapshots; cold storage replication; monthly offsite archive.
+• Bill of Materials: UniFi Gateway, 3× Proxmox nodes, HL15 TrueNAS, UPS A/B, security lab VMs.
+• Runbook Index: VM recovery, VLAN/firewall deployment, cert/key rotation, SOC playbooks.
+______________________________________________________________________________________________
+
+✅ Final Notes
+
+This build demonstrates enterprise-grade IT practices implemented in a homelab environment:
+
+	Segmented networks with strict firewalling
+	Virtualization cluster with HA and shared storage
+	SOC-style monitoring with SIEM/IDS/Honeypots
+	End-to-end documentation, backup validation, and security drills
